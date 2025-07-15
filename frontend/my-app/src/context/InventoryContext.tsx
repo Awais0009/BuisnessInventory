@@ -16,31 +16,70 @@ const mockCrops: Crop[] = [
   { id: '9', name: 'Rye', stock: 60, unit: 'kg', pricePerUnit: 1300, lastTradedAt: new Date('2024-01-07'), isVisible: true },
 ];
 
+// Replace generateMonthlyTransactions with generateDailyTransactions
+function generateDailyTransactions() {
+  const crops = mockCrops;
+  const transactions: Transaction[] = [];
+  const today = new Date();
+  const start = new Date(today.getFullYear(), today.getMonth() - 12, today.getDate());
+  for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) {
+    for (const crop of crops) {
+      // Create more realistic price variations
+      const dayOfYear = Math.floor((d.getTime() - new Date(d.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
+      const seasonalFactor = Math.sin((dayOfYear / 365) * 2 * Math.PI) * 0.2; // ±20% seasonal variation
+      const randomFactor = (Math.sin(dayOfYear * parseInt(crop.id, 10)) * 0.15); // ±15% random variation
+      const marketTrend = (dayOfYear / 365) * 0.1; // 10% yearly upward trend
+      
+      // Buy price (what we pay to suppliers) - base price with variations
+      const buyPriceMultiplier = 1 + seasonalFactor + randomFactor + marketTrend;
+      const buyQuantity = 50 + ((d.getDate() + parseInt(crop.id, 10)) % 100);
+      const buyRate = crop.pricePerUnit * buyPriceMultiplier;
+      const buyTotal = buyRate * buyQuantity;
+      
+      // Sell price (what we get from customers) - usually 15-25% higher than buy price for profit
+      const profitMarginBase = 0.20; // 20% base profit margin
+      const demandFactor = Math.sin((dayOfYear / 365) * 2 * Math.PI + Math.PI/4) * 0.1; // Demand varies
+      const competitionFactor = (Math.cos(dayOfYear * parseInt(crop.id, 10) * 0.5) * 0.05); // Competition effect
+      const sellPriceMultiplier = buyPriceMultiplier * (1 + profitMarginBase + demandFactor + competitionFactor);
+      const sellQuantity = 20 + ((d.getDate() + parseInt(crop.id, 10)) % 60);
+      const sellRate = crop.pricePerUnit * sellPriceMultiplier;
+      const sellTotal = sellRate * sellQuantity;
+      
+      // Buy transaction
+      transactions.push({
+        id: `buy-${crop.id}-${d.toISOString().slice(0,10)}`,
+        cropId: crop.id,
+        cropName: crop.name,
+        action: 'buy',
+        quantity: buyQuantity,
+        rate: Math.round(buyRate * 100) / 100, // Round to 2 decimal places
+        total: Math.round(buyTotal * 100) / 100,
+        partyName: 'Supplier',
+        notes: 'Daily buy',
+        date: new Date(d),
+      });
+      
+      // Sell transaction
+      transactions.push({
+        id: `sell-${crop.id}-${d.toISOString().slice(0,10)}`,
+        cropId: crop.id,
+        cropName: crop.name,
+        action: 'sell',
+        quantity: sellQuantity,
+        rate: Math.round(sellRate * 100) / 100,
+        total: Math.round(sellTotal * 100) / 100,
+        partyName: 'Customer',
+        notes: 'Daily sell',
+        date: new Date(d),
+      });
+    }
+  }
+  return transactions;
+}
+
 const mockTransactions: Transaction[] = [
-  {
-    id: '1',
-    cropId: '1',
-    cropName: 'Wheat',
-    action: 'buy',
-    quantity: 100,
-    rate: 1200,
-    total: 3000,
-    partyName: 'John Farmer',
-    notes: 'Fresh harvest',
-    date: new Date('2024-01-15'),
-  },
-  {
-    id: '2',
-    cropId: '2',
-    cropName: 'Rice',
-    action: 'sell',
-    quantity: 50,
-    rate: 1400,
-    total: 1750,
-    partyName: 'Local Market',
-    notes: 'Premium quality',
-    date: new Date('2024-01-14'),
-  },
+  // Only use generated daily transactions
+  ...generateDailyTransactions(),
 ];
 
 const mockUser: User = {

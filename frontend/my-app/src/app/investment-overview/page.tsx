@@ -1,13 +1,13 @@
 'use client';
 
 import { Navbar } from '@/components/dashboard/Navbar';
-import { InvestmentOverview } from '@/components/investment-overview/InvestmentOverview';
+import CropAnalyticsDashboard from '@/components/investment-overview/CropAnalyticsDashboard';
 
 export default function InvestmentOverviewPage() {
   return (
     <>
       <Navbar />
-      <InvestmentOverview />
+      <CropAnalyticsDashboard />
     </>
   );
 } 
