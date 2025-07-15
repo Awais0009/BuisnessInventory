@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
+import * as dotenv from 'dotenv';
+import { PrismaClient } from '../generated/prisma';
 
 // Import routes
 import cropRoutes from './routes/crops';

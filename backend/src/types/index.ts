@@ -1,10 +1,9 @@
 import { z } from 'zod';
+import { TransactionType as PrismaTransactionType } from '../../generated/prisma';
 
-// Enums
-export enum TransactionType {
-  BUY = 'BUY',
-  SELL = 'SELL'
-}
+// Use Prisma enum
+export const TransactionType = PrismaTransactionType;
+export type TransactionType = PrismaTransactionType;
 
 // Zod schemas for validation
 export const CropSchema = z.object({
@@ -111,6 +110,6 @@ export interface DashboardStats {
   totalRevenue: number;
   netProfit: number;
   profitMargin: number;
-  recentTransactions: Transaction[];
+  recentTransactions: any[]; // Use any[] for Prisma query results
   topProfitableCrops: CropAnalytics[];
 }

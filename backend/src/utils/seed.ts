@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../../generated/prisma';
 import { TransactionType } from '../types';
 
 const prisma = new PrismaClient();
@@ -16,7 +16,7 @@ const crops = [
 ];
 
 async function generateRealisticTransactions(cropId: string, cropName: string, basePrice: number, startDate: Date, endDate: Date) {
-  const transactions = [];
+  const transactions: any[] = [];
   const currentDate = new Date(startDate);
   let dayCount = 0;
 
@@ -96,7 +96,7 @@ async function seed() {
     console.log('🗑️  Cleared existing data');
 
     // Create crops
-    const createdCrops = [];
+    const createdCrops: any[] = [];
     for (const crop of crops) {
       const createdCrop = await prisma.crop.create({
         data: crop
