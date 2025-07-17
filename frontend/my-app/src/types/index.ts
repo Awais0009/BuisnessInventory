@@ -1,3 +1,41 @@
+// =============================================
+// Supabase Auth & Profile Types
+// =============================================
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  full_name: string;
+  avatar_url?: string;
+  role: 'admin' | 'manager' | 'user' | 'viewer';
+  company_name?: string;
+  phone?: string;
+  address?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Company {
+  id: string;
+  name: string;
+  description?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  logo_url?: string;
+  tax_id?: string;
+  created_by: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// =============================================
+// Business Logic Types
+// =============================================
+
 export interface Crop {
   id: string;
   name: string;

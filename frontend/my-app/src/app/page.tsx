@@ -1,5 +1,8 @@
 'use client';
 
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { Navbar } from '@/components/dashboard/Navbar';
 import { InventoryList } from '@/components/dashboard/InventoryList';
 import { RecentTransactions } from '@/components/dashboard/RecentTransactions';
@@ -8,6 +11,32 @@ import { AddCropModal } from '@/components/AddCropModal';
 import { Toaster } from 'sonner';
 
 export default function Dashboard() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    // If not loading and no user, redirect to landing page
+    if (!loading && !user) {
+      router.push('/landing');
+    }
+  }, [user, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-blue-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render anything while redirecting
+  if (!user) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
       <Navbar />
