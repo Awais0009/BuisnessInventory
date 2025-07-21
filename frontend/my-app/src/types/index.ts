@@ -1,4 +1,14 @@
 // =============================================
+// Database Enums (matching your SQL schema)
+// =============================================
+
+export type UserRole = 'admin' | 'manager' | 'user' | 'viewer';
+export type TransactionAction = 'buy' | 'sell';
+export type TransactionStatus = 'pending' | 'confirmed' | 'cancelled';
+export type PaymentMethod = 'cash' | 'bank_transfer' | 'credit_card' | 'check' | 'other';
+export type PartyType = 'buyer' | 'seller' | 'both';
+
+// =============================================
 // Supabase Auth & Profile Types
 // =============================================
 
@@ -7,7 +17,7 @@ export interface UserProfile {
   email: string;
   full_name: string;
   avatar_url?: string;
-  role: 'admin' | 'manager' | 'user' | 'viewer';
+  role: UserRole;
   company_name?: string;
   phone?: string;
   address?: string;
@@ -50,13 +60,35 @@ export interface Transaction {
   id: string;
   cropId: string;
   cropName: string;
-  action: 'buy' | 'sell';
+  action: TransactionAction;
   quantity: number; // in kg
   rate: number; // per 40kg
   total: number;
   partyName: string;
   notes?: string;
   date: Date;
+  
+  // New fields from database schema
+  status: TransactionStatus;
+  paymentMethod: PaymentMethod;
+  referenceNumber?: string;
+  batchNumber?: string;
+  taxPercentage?: number;
+  taxAmount?: number;
+  discountAmount?: number;
+  finalAmount?: number;
+  paymentStatus?: string;
+  paidAmount?: number;
+  dueDate?: Date;
+  paymentDate?: Date;
+  qualityGrade?: string;
+  qualityNotes?: string;
+  vehicleNumber?: string;
+  driverName?: string;
+  deliveryAddress?: string;
+  
+  // Bulk transaction support
+  bulkTransactionId?: string; // Groups multiple transactions together
 }
 
 export interface User {
@@ -65,7 +97,7 @@ export interface User {
   role: 'Shop Owner' | 'Manager' | 'Employee';
 }
 
-export type ActionType = 'buy' | 'sell';
+export type ActionType = TransactionAction;
 
 export interface InventoryState {
   crops: Crop[];
@@ -74,6 +106,7 @@ export interface InventoryState {
   selectedCrop: Crop | null;
   actionType: ActionType | null;
   isTransactionModalOpen: boolean;
+  isBulkTransactionModalOpen: boolean; // New state for bulk modal
   isAddCropModalOpen: boolean;
   user: User | null;
   maxVisibleCrops: number;

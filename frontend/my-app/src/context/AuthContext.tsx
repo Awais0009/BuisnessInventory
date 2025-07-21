@@ -41,18 +41,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
+    let mounted = true
+
     // Get initial session
     const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setSession(session)
-      setUser(session?.user ?? null)
-      
-      if (session?.user) {
-        const userProfile = await getUserProfile(session.user.id)
-        setProfile(userProfile)
+      try {
+        setLoading(true)
+        
+        // Check for existing session
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (error) {
+          console.error('Error getting session:', error)
+          // Clear any corrupted session data
+          await supabase.auth.signOut()
+          return
+        }
+
+        if (mounted) {
+          setSession(session)
+          setUser(session?.user ?? null)
+          
+          if (session?.user) {
+            try {
+              const userProfile = await getUserProfile(session.user.id)
+              if (mounted) {
+                setProfile(userProfile)
+              }
+            } catch (profileError) {
+              console.error('Error fetching profile:', profileError)
+              // Don't sign out for profile errors, user might still be valid
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Unexpected error in getInitialSession:', error)
+      } finally {
+        if (mounted) {
+          setLoading(false)
+        }
       }
-      
-      setLoading(false)
     }
 
     getInitialSession()
@@ -61,20 +89,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setSession(session)
-      setUser(session?.user ?? null)
+      console.log('Auth state changed:', event, session?.user?.email)
       
-      if (session?.user) {
-        const userProfile = await getUserProfile(session.user.id)
-        setProfile(userProfile)
-      } else {
-        setProfile(null)
+      if (!mounted) return
+
+      // Handle different auth events
+      switch (event) {
+        case 'SIGNED_IN':
+        case 'TOKEN_REFRESHED':
+          setSession(session)
+          setUser(session?.user ?? null)
+          
+          if (session?.user) {
+            try {
+              const userProfile = await getUserProfile(session.user.id)
+              if (mounted) {
+                setProfile(userProfile)
+              }
+            } catch (error) {
+              console.error('Error fetching profile after auth change:', error)
+            }
+          }
+          break
+          
+        case 'SIGNED_OUT':
+          setSession(null)
+          setUser(null)
+          setProfile(null)
+          break
+          
+        case 'PASSWORD_RECOVERY':
+          // Handle password recovery if needed
+          break
+          
+        default:
+          setSession(session)
+          setUser(session?.user ?? null)
+          if (!session?.user) {
+            setProfile(null)
+          }
       }
       
       setLoading(false)
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   const value = {

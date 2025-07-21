@@ -57,6 +57,8 @@ function generateDailyTransactions() {
         partyName: 'Supplier',
         notes: 'Daily buy',
         date: new Date(d),
+        status: 'confirmed', // Fix status
+        paymentMethod: 'cash',
       });
       
       // Sell transaction
@@ -71,6 +73,8 @@ function generateDailyTransactions() {
         partyName: 'Customer',
         notes: 'Daily sell',
         date: new Date(d),
+        status: 'confirmed', // Fix status
+        paymentMethod: 'cash', // Default payment method
       });
     }
   }
@@ -92,9 +96,11 @@ type InventoryAction =
   | { type: 'SET_SELECTED_CROP'; payload: Crop | null }
   | { type: 'SET_ACTION_TYPE'; payload: ActionType | null }
   | { type: 'SET_TRANSACTION_MODAL_OPEN'; payload: boolean }
+  | { type: 'SET_BULK_TRANSACTION_MODAL_OPEN'; payload: boolean } // Add bulk modal action
   | { type: 'SET_ADD_CROP_MODAL_OPEN'; payload: boolean }
   | { type: 'ADD_TRANSACTION'; payload: Transaction }
   | { type: 'UPDATE_CROP_STOCK'; payload: { cropId: string; quantity: number; action: ActionType } }
+  | { type: 'UPDATE_CROP'; payload: { id: string; updates: Partial<Crop> } } // Add update crop action
   | { type: 'ADD_CROP'; payload: Crop }
   | { type: 'SET_USER'; payload: User | null };
 
@@ -105,6 +111,7 @@ const initialState: InventoryState = {
   selectedCrop: null,
   actionType: null,
   isTransactionModalOpen: false,
+  isBulkTransactionModalOpen: false, // Add bulk modal state
   isAddCropModalOpen: false,
   user: mockUser,
   maxVisibleCrops: 5, // Only 5 visible crops
@@ -131,6 +138,8 @@ function inventoryReducer(state: InventoryState, action: InventoryAction): Inven
       return { ...state, actionType: action.payload };
     case 'SET_TRANSACTION_MODAL_OPEN':
       return { ...state, isTransactionModalOpen: action.payload };
+    case 'SET_BULK_TRANSACTION_MODAL_OPEN': // Add bulk modal case
+      return { ...state, isBulkTransactionModalOpen: action.payload };
     case 'SET_ADD_CROP_MODAL_OPEN':
       return { ...state, isAddCropModalOpen: action.payload };
     case 'ADD_TRANSACTION':
@@ -163,6 +172,17 @@ function inventoryReducer(state: InventoryState, action: InventoryAction): Inven
               }
             : crop
         ),
+      };
+    case 'UPDATE_CROP':
+      const modifiedCrops = state.crops.map(crop =>
+        crop.id === action.payload.id
+          ? { ...crop, ...action.payload.updates }
+          : crop
+      );
+      return {
+        ...state,
+        crops: modifiedCrops,
+        visibleCrops: updateCropVisibility(modifiedCrops, state.maxVisibleCrops),
       };
     case 'ADD_CROP':
       const newCrop = {

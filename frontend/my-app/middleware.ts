@@ -15,7 +15,7 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({
             request,
           })
@@ -33,7 +33,17 @@ export async function middleware(request: NextRequest) {
 
   const {
     data: { user },
+    error
   } = await supabase.auth.getUser()
+
+  // If there's an auth error, clear the session
+  if (error) {
+    console.log('Auth error in middleware:', error.message)
+    // Clear potentially corrupted session
+    const response = NextResponse.redirect(new URL('/landing', request.url))
+    response.cookies.delete('sb-auth-token')
+    return response
+  }
 
   // Protected routes - main dashboard and sub-pages
   const protectedPaths = ['/', '/investment-overview', '/transaction-ledger']
