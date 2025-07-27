@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { signIn } from '@/lib/auth'
+import { signIn, resendConfirmationEmail } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,7 +14,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
-  const router = useRouter()
+  const [resendingEmail, setResendingEmail] = useState(false)
+  const [showResendOption, setShowResendOption] = useState(false)
   const searchParams = useSearchParams()
 
   useEffect(() => {
@@ -32,20 +33,63 @@ export default function LoginPage() {
     }
   }, [searchParams])
 
+  const handleResendEmail = async () => {
+    if (!email) {
+      setError('Please enter your email address first')
+      return
+    }
+
+    setResendingEmail(true)
+    try {
+      const { error } = await resendConfirmationEmail(email)
+      if (error) {
+        setError(`Failed to resend confirmation email: ${error.message}`)
+      } else {
+        setSuccessMessage('Confirmation email has been resent! Please check your inbox.')
+        setError('')
+        setShowResendOption(false)
+      }
+    } catch {
+      setError('Failed to resend confirmation email. Please try again.')
+    } finally {
+      setResendingEmail(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
 
     try {
+      console.log('🔄 Starting login process for:', email);
       const { user, error } = await signIn({ email, password })
       
+      console.log('📊 Login result:', { user: !!user, error: error?.message });
+      
       if (error) {
-        setError(error.message)
+        console.log('❌ Login error:', error.message);
+        // Provide more helpful error messages
+        if (error.message.includes('confirm your email')) {
+          setError('Please confirm your email address before logging in. Check your email for the confirmation link.');
+          setShowResendOption(true);
+        } else if (error.message.includes('Invalid email or password')) {
+          setError('Invalid email or password. Please check your credentials and try again.');
+          setShowResendOption(false);
+        } else {
+          setError(error.message);
+          setShowResendOption(false);
+        }
       } else if (user) {
-        router.push('/') // Redirect to main dashboard
+        console.log('✅ Login successful, user:', user.email);
+        // Force reload the page to reinitialize AuthContext
+        window.location.href = '/';
+      } else {
+        console.log('⚠️ Login: No user returned and no error');
+        setError('Login failed - please try again');
       }
-    } catch {
+    } catch (err) {
+      console.error('💥 Login exception:', err);
       setError('An unexpected error occurred')
     } finally {
       setLoading(false)
@@ -82,6 +126,18 @@ export default function LoginPage() {
               {error && (
                 <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded">
                   {error}
+                  {showResendOption && (
+                    <div className="mt-3">
+                      <button
+                        type="button"
+                        onClick={handleResendEmail}
+                        disabled={resendingEmail}
+                        className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200 disabled:opacity-50"
+                      >
+                        {resendingEmail ? 'Sending...' : 'Resend Confirmation Email'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
               

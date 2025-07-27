@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { Calculator, Plus, Trash2, ShoppingCart, User, FileText, Printer } from 'lucide-react';
 import { BillPrint } from '@/components/bill/BillPrint';
+import { CustomerAutocomplete } from '@/components/ui/CustomerAutocomplete';
 
 interface BulkTransactionItem {
   id: string;
@@ -38,13 +39,20 @@ export function BulkTransactionModal({ isOpen, onClose }: BulkTransactionModalPr
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   
   const [formData, setFormData] = useState({
-    partyName: '',
     notes: '',
     status: 'confirmed' as TransactionStatus,
     paymentMethod: 'cash' as PaymentMethod,
     taxPercentage: '',
     discountAmount: '',
     referenceNumber: '',
+  });
+
+  // Customer data state
+  const [customerData, setCustomerData] = useState({
+    name: '',
+    phone: '',
+    address: '',
+    customerId: undefined as string | undefined,
   });
   
   const [lastProcessedTransaction, setLastProcessedTransaction] = useState<{
@@ -165,8 +173,8 @@ export function BulkTransactionModal({ isOpen, onClose }: BulkTransactionModalPr
       }
     }
     
-    if (!formData.partyName) {
-      toast.error('Please enter party name');
+    if (!customerData.name) {
+      toast.error('Please enter customer name');
       return false;
     }
     
@@ -207,7 +215,8 @@ export function BulkTransactionModal({ isOpen, onClose }: BulkTransactionModalPr
         quantity,
         rate,
         total: item.action === 'buy' ? -item.subtotal : item.subtotal, // Negative for purchases, positive for sales
-        partyName: formData.partyName,
+        partyName: customerData.name,
+        customerId: customerData.customerId,
         notes: formData.notes || undefined,
         date: timestamp,
         status: formData.status,
@@ -232,7 +241,7 @@ export function BulkTransactionModal({ isOpen, onClose }: BulkTransactionModalPr
     const transactionData = {
       items: [...transactionItems],
       totals,
-      partyName: formData.partyName,
+      partyName: customerData.name,
       date: timestamp,
       referenceNumber: invoiceNumber
     };
@@ -513,13 +522,18 @@ export function BulkTransactionModal({ isOpen, onClose }: BulkTransactionModalPr
       { id: '1', cropName: '', action: 'buy', quantity: '', rate: '', subtotal: 0 }
     ]);
     setFormData({
-      partyName: '',
       notes: '',
       status: 'confirmed',
       paymentMethod: 'cash',
       taxPercentage: '',
       discountAmount: '',
       referenceNumber: '',
+    });
+    setCustomerData({
+      name: '',
+      phone: '',
+      address: '',
+      customerId: undefined,
     });
     setLastProcessedTransaction(null);
     onClose();
@@ -648,11 +662,16 @@ export function BulkTransactionModal({ isOpen, onClose }: BulkTransactionModalPr
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Party Name</label>
-                  <Input
-                    value={formData.partyName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, partyName: e.target.value }))}
-                    placeholder="Enter party name"
+                  <label className="text-sm font-medium">Customer Information</label>
+                  <CustomerAutocomplete
+                    value={customerData}
+                    onChange={(customer) => setCustomerData({
+                      name: customer.name,
+                      phone: customer.phone || '',
+                      address: customer.address || '',
+                      customerId: customer.customerId,
+                    })}
+                    placeholder="Search customer or add new..."
                     required
                   />
                 </div>

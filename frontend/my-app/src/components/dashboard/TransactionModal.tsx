@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CustomerAutocomplete } from '@/components/ui/CustomerAutocomplete';
 import { toast } from 'sonner';
 import { Calculator, User, FileText, Printer } from 'lucide-react';
 
@@ -20,7 +21,6 @@ export function TransactionModal() {
     // Basic transaction fields
     quantity: '',
     rate: '',
-    partyName: '',
     notes: '',
     
     // New database fields
@@ -36,6 +36,14 @@ export function TransactionModal() {
     driverName: '',
     deliveryAddress: '',
     dueDate: '',
+  });
+
+  // Customer data state
+  const [customerData, setCustomerData] = useState({
+    name: '',
+    phone: '',
+    address: '',
+    customerId: undefined as string | undefined,
   });
 
   const isOpen = state.isTransactionModalOpen;
@@ -279,7 +287,7 @@ export function TransactionModal() {
     const quantity = parseFloat(formData.quantity);
     const rate = parseFloat(formData.rate);
     
-    if (!quantity || !rate || !formData.partyName) {
+    if (!quantity || !rate || !customerData.name) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -298,7 +306,8 @@ export function TransactionModal() {
       quantity,
       rate,
       total: actionType === 'buy' ? -totalCalc.finalAmount : totalCalc.finalAmount, // Negative for purchases, positive for sales
-      partyName: formData.partyName,
+      partyName: customerData.name,
+      customerId: customerData.customerId,
       notes: formData.notes || undefined,
       date: new Date(),
       
@@ -376,7 +385,6 @@ export function TransactionModal() {
     setFormData({
       quantity: '',
       rate: '',
-      partyName: '',
       notes: '',
       status: 'confirmed',
       paymentMethod: 'cash',
@@ -390,6 +398,12 @@ export function TransactionModal() {
       driverName: '',
       deliveryAddress: '',
       dueDate: '',
+    });
+    setCustomerData({
+      name: '',
+      phone: '',
+      address: '',
+      customerId: undefined,
     });
   };
 
@@ -450,17 +464,23 @@ export function TransactionModal() {
               />
             </div>
 
-            {/* Party Name */}
+            {/* Customer Selection */}
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center">
                 <User className="w-4 h-4 mr-1" />
-                {actionType === 'buy' ? 'Seller' : 'Buyer'} Name
+                {actionType === 'buy' ? 'Seller' : 'Buyer'} Information
               </label>
-              <Input
-                value={formData.partyName}
-                onChange={(e) => setFormData(prev => ({ ...prev, partyName: e.target.value }))}
-                placeholder={`Enter ${actionType === 'buy' ? 'seller' : 'buyer'} name`}
+              <CustomerAutocomplete
+                value={customerData}
+                onChange={(customer) => setCustomerData({
+                  name: customer.name,
+                  phone: customer.phone || '',
+                  address: customer.address || '',
+                  customerId: customer.customerId,
+                })}
+                placeholder={`Search ${actionType === 'buy' ? 'seller' : 'buyer'} or add new...`}
                 required
+                actionType={actionType}
               />
             </div>
 

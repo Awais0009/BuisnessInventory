@@ -1,154 +1,97 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { User, Session } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase-client'
-import { UserProfile, getUserProfile } from '@/lib/auth'
+import { UserProfile, getCurrentUser, signOut as authSignOut, verifyToken } from '@/lib/auth'
 
 interface AuthContextType {
-  user: User | null
-  profile: UserProfile | null
-  session: Session | null
+  user: UserProfile | null
   loading: boolean
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
+  isAuthenticated: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
+  const [user, setUser] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
 
   const refreshProfile = async () => {
-    if (user) {
-      const userProfile = await getUserProfile(user.id)
-      setProfile(userProfile)
+    try {
+      const userProfile = await getCurrentUser()
+      setUser(userProfile)
+    } catch (error) {
+      console.error('Error refreshing profile:', error)
+      setUser(null)
     }
   }
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) {
-      console.error('Error signing out:', error)
-    } else {
+    try {
+      await authSignOut()
       setUser(null)
-      setProfile(null)
-      setSession(null)
+    } catch (error) {
+      console.error('Error signing out:', error)
+      // Force local sign out even if backend call fails
+      setUser(null)
     }
   }
 
+  // Initialize auth state
   useEffect(() => {
-    let mounted = true
-
-    // Get initial session
-    const getInitialSession = async () => {
+    const initializeAuth = async () => {
       try {
-        setLoading(true)
+        // First check if there's a stored token
+        const storedToken = localStorage.getItem('auth_token')
+        console.log('AuthContext - Initialize auth, token exists:', !!storedToken)
         
-        // Check for existing session
-        const { data: { session }, error } = await supabase.auth.getSession()
-        
-        if (error) {
-          console.error('Error getting session:', error)
-          // Clear any corrupted session data
-          await supabase.auth.signOut()
+        if (!storedToken) {
+          console.log('AuthContext - No token found, setting user to null')
+          setUser(null)
+          setLoading(false)
           return
         }
 
-        if (mounted) {
-          setSession(session)
-          setUser(session?.user ?? null)
-          
-          if (session?.user) {
-            try {
-              const userProfile = await getUserProfile(session.user.id)
-              if (mounted) {
-                setProfile(userProfile)
-              }
-            } catch (profileError) {
-              console.error('Error fetching profile:', profileError)
-              // Don't sign out for profile errors, user might still be valid
-            }
-          }
+        // Check if token is valid
+        console.log('AuthContext - Verifying token...')
+        const isValid = await verifyToken()
+        console.log('AuthContext - Token verification result:', isValid)
+        
+        if (isValid) {
+          // Get user profile
+          console.log('AuthContext - Getting user profile...')
+          const userProfile = await getCurrentUser()
+          console.log('AuthContext - User profile retrieved:', !!userProfile)
+          setUser(userProfile)
+        } else {
+          console.log('AuthContext - Token invalid, clearing user')
+          setUser(null)
         }
       } catch (error) {
-        console.error('Unexpected error in getInitialSession:', error)
+        console.error('Error initializing auth:', error)
+        setUser(null)
       } finally {
-        if (mounted) {
-          setLoading(false)
-        }
+        setLoading(false)
       }
     }
 
-    getInitialSession()
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, session?.user?.email)
-      
-      if (!mounted) return
-
-      // Handle different auth events
-      switch (event) {
-        case 'SIGNED_IN':
-        case 'TOKEN_REFRESHED':
-          setSession(session)
-          setUser(session?.user ?? null)
-          
-          if (session?.user) {
-            try {
-              const userProfile = await getUserProfile(session.user.id)
-              if (mounted) {
-                setProfile(userProfile)
-              }
-            } catch (error) {
-              console.error('Error fetching profile after auth change:', error)
-            }
-          }
-          break
-          
-        case 'SIGNED_OUT':
-          setSession(null)
-          setUser(null)
-          setProfile(null)
-          break
-          
-        case 'PASSWORD_RECOVERY':
-          // Handle password recovery if needed
-          break
-          
-        default:
-          setSession(session)
-          setUser(session?.user ?? null)
-          if (!session?.user) {
-            setProfile(null)
-          }
-      }
-      
-      setLoading(false)
-    })
-
-    return () => {
-      mounted = false
-      subscription.unsubscribe()
-    }
+    initializeAuth()
   }, [])
 
-  const value = {
+  const value: AuthContextType = {
     user,
-    profile,
-    session,
     loading,
     signOut,
     refreshProfile,
+    isAuthenticated: user !== null
   }
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
 export function useAuth() {

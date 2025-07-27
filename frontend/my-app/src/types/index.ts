@@ -15,28 +15,32 @@ export type PartyType = 'buyer' | 'seller' | 'both';
 export interface UserProfile {
   id: string;
   email: string;
-  full_name: string;
+  full_name?: string;
   avatar_url?: string;
   role: UserRole;
-  company_name?: string;
+  business_name?: string;  // Fixed spelling to match database schema
   phone?: string;
   address?: string;
   is_active: boolean;
+  email_confirmed_at?: string;  // Email confirmation field
   created_at: string;
   updated_at: string;
 }
 
-export interface Company {
+
+export interface Customer {
   id: string;
   name: string;
-  description?: string;
-  address?: string;
+  contact_person?: string;
   phone?: string;
   email?: string;
-  website?: string;
-  logo_url?: string;
-  tax_id?: string;
-  created_by: string;
+  address?: string;
+  party_type: PartyType;
+  company_id?: string;
+  created_by?: string;
+  notes?: string;
+  credit_limit: number;
+  current_balance: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -65,6 +69,7 @@ export interface Transaction {
   rate: number; // per 40kg
   total: number;
   partyName: string;
+  customerId?: string; // Link to customer/party ID
   notes?: string;
   date: Date;
   

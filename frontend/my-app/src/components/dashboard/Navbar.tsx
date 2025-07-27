@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 export function Navbar() {
-  const { user, profile, signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const router = useRouter();
 
   const handleSignOut = async () => {
@@ -57,7 +57,7 @@ export function Navbar() {
                 <div className="flex items-center space-x-2 bg-white/20 px-3 py-1 rounded-full">
                   <User className="w-4 h-4 text-gray-600" />
                   <span className="text-sm font-medium text-gray-700">
-                    {profile?.full_name || user.email}
+                    {user?.full_name || user?.email}
                   </span>
                 </div>
                 <Button variant="outline" size="sm" onClick={handleSignOut}>
